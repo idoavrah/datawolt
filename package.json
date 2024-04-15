@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "cors": "^2.8.5",
+    "firebase-tools": "^13.7.2"
+  }
+}
