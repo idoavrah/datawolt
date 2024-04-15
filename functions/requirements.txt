@@ -1,0 +1,7 @@
+firebase
+firebase-admin
+firebase-functions
+PyJWT
+python-dateutil
+pytz
+requests

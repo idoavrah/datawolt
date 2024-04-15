@@ -29,60 +29,65 @@ def stop_rendering():
 
 
 def prepare_data():
-    with st.spinner("Loading user data..."):
-        db = firestore.client()
-        blob = (
-            db.collection("orders")
-            .document(st.query_params.get("userid"))
-            .get()
-            .to_dict()
-        )
+    try:
+        with st.spinner("Loading user data..."):
+            db = firestore.client()
+            blob = (
+                db.collection("orders")
+                .document(st.query_params.get("userid"))
+                .get()
+                .to_dict()
+            )
 
-        if not blob:
+            if not blob:
+                raise Exception("No data found")
+
+            orders = blob.get("orders", [])
+            items = blob.get("items", [])
+            if not orders:
+                raise Exception("No data found")
+
+            orders = pd.json_normalize(orders)
+            orders = orders.drop_duplicates(subset="order_id")
+
+            items = pd.json_normalize(items)
+            items = items.drop_duplicates(subset="item_id")
+
+            monthly = (
+                orders.groupby(["currency", "year-month"])
+                .sum("total_price")
+                .sort_values(["total_price"])
+            ).reset_index(level=["currency", "year-month"])
+
+            totals = (
+                orders[["currency", "total_price"]]
+                .groupby(["currency"])
+                .sum()
+                .sort_values("total_price", ascending=False)
+            ).to_dict()["total_price"]
+
+            averages = (
+                orders[["currency", "total_price"]]
+                .groupby(["currency"])
+                .mean()
+                .sort_values("total_price", ascending=False)
+            ).to_dict()["total_price"]
+
+            everything = (
+                items.groupby(["currency", "venue_name_fixed", "name"])
+                .agg({"price": lambda x: np.sum(x)})
+                .reset_index()
+            )
+
+            locations = orders.groupby("venue_name").agg(
+                latitude=("latitude", "mean"),
+                longitude=("longitude", "mean"),
+                count=("venue_name", lambda x: x.size * 10),
+            )
+
+    except Exception as e:
+        if e.args[0] == "No data found":
             stop_rendering()
-
-        orders = blob.get("orders", [])
-        items = blob.get("items", [])
-        if not orders:
-            stop_rendering()
-
-        orders = pd.json_normalize(orders)
-        orders = orders.drop_duplicates(subset="order_id")
-
-        items = pd.json_normalize(items)
-        items = items.drop_duplicates(subset="item_id")
-
-        monthly = (
-            orders.groupby(["currency", "year-month"])
-            .sum("total_price")
-            .sort_values(["total_price"])
-        ).reset_index(level=["currency", "year-month"])
-
-        totals = (
-            orders[["currency", "total_price"]]
-            .groupby(["currency"])
-            .sum()
-            .sort_values("total_price", ascending=False)
-        ).to_dict()["total_price"]
-
-        averages = (
-            orders[["currency", "total_price"]]
-            .groupby(["currency"])
-            .mean()
-            .sort_values("total_price", ascending=False)
-        ).to_dict()["total_price"]
-
-        everything = (
-            items.groupby(["currency", "venue_name_fixed", "name"])
-            .agg({"price": lambda x: np.sum(x)})
-            .reset_index()
-        )
-
-        locations = orders.groupby("venue_name").agg(
-            latitude=("latitude", "mean"),
-            longitude=("longitude", "mean"),
-            count=("venue_name", lambda x: x.size * 10),
-        )
 
     return orders, monthly, totals, averages, everything, locations
 
