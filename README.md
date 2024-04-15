@@ -12,4 +12,4 @@
 * Datawolt uses your temporary credentials to pull your order data from Wolt but saves only the relevant parts (orders, items, prices and restaurant names and locations). UserId is hashed, credentials are not saved anywhere.
 * Your dashboard has a public endpoint and can be viewed by others if they know your hash-generated userid. The generated userid is basically impossible to guess and can not be traced back to the original Wolt userid or your username / e-mail.
 
-![](./streamlit/demo.webm "Demo")
+[![Datawolt Demo](demo.png)](https://youtu.be/6GuQHMsE0j0)

@@ -98,7 +98,7 @@ def build_welcome_screen():
     )
 
     cont = st.container(border=True)
-    cont.video("demo.webm")
+    cont.video("https://youtu.be/6GuQHMsE0j0")
 
     st.markdown(
         """
