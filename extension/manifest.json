@@ -2,12 +2,8 @@
   "manifest_version": 3,
   "name": "DataWolt",
   "description": "DataWolt pulls user's Wolt order data and creates a personal summary dashboard",
-  "version": "1.0",
-  "permissions": [
-    "activeTab",
-    "cookies",
-    "webRequest"
-  ],
+  "version": "1.0.1",
+  "permissions": [],
   "content_scripts": [
     {
       "matches": ["https://*.wolt.com/*order-history"],
