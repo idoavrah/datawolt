@@ -1,3 +1,4 @@
+import re
 import json
 import pytz
 import base64
@@ -28,13 +29,13 @@ def stop_rendering():
     st.stop()
 
 
-def prepare_data():
+def prepare_data(userid: str):
     try:
         with st.spinner("Loading user data..."):
             db = firestore.client()
             blob = (
                 db.collection("orders")
-                .document(st.query_params.get("userid"))
+                .document(userid)
                 .get()
                 .to_dict()
             )
@@ -223,10 +224,15 @@ st.set_page_config(
 )
 st.header("Welcome to DataWolt :yum:")
 
-if not st.query_params.get("userid"):
+userid = st.query_params.get("userid")
+if not userid:
+    build_welcome_screen()
+    
+elif not re.fullmatch(r'^[0-9a-z]*$', userid):
+    st.error(f"invalid userid: {userid}")
     build_welcome_screen()
 
 else:
     init_firebase()
-    orders, monthly, totals, averages, everything, locations = prepare_data()
+    orders, monthly, totals, averages, everything, locations = prepare_data(userid)
     build_dashboard(orders, monthly, totals, averages, everything, locations)
