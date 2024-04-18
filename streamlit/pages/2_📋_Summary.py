@@ -63,7 +63,7 @@ with st.spinner("Loading summary data..."):
         if value > 10
     ]
 
-    st.subheader("Restaurant Tree Map")
+    st.subheader("Top restaurants and items")
 
     chart = px.treemap(
         dish_totals,
