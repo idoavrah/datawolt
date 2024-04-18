@@ -23,19 +23,16 @@ def stop_rendering():
     st.error(
         "No data found. Please make sure you have the DataWolt extension installed and then visit the Wolt order history page."
     )
-    st.page_link(
-        page="https://datawolt.streamlit.app/", label=":house: Back to welcome screen"
-    )
     st.stop()
 
 
-def prepare_data(userid: str):
+def prepare_data():
     try:
         with st.spinner("Loading user data..."):
             db = firestore.client()
             blob = (
                 db.collection("orders")
-                .document(userid)
+                .document(st.session_state["userid"])
                 .get()
                 .to_dict()
             )
@@ -49,10 +46,7 @@ def prepare_data(userid: str):
                 raise Exception("No data found")
 
             orders = pd.json_normalize(orders)
-            orders = orders.drop_duplicates(subset="order_id")
-
             items = pd.json_normalize(items)
-            items = items.drop_duplicates(subset="item_id")
 
             monthly = (
                 orders.groupby(["currency", "year-month"])
@@ -76,7 +70,7 @@ def prepare_data(userid: str):
 
             everything = (
                 items.groupby(["currency", "venue_name_fixed", "name"])
-                .agg({"price": lambda x: np.sum(x)})
+                .sum("price")
                 .reset_index()
             )
 
@@ -91,31 +85,6 @@ def prepare_data(userid: str):
             stop_rendering()
 
     return orders, monthly, totals, averages, everything, locations
-
-
-def build_welcome_screen():
-    st.markdown(
-        """
-        * Datawolt is a Streamlit app that visualizes your last 12 months of Wolt delivery data.
-        * To get started you need to install the Datawolt [Chrome extension](https://chromewebstore.google.com/detail/datawolt/blphmcckpkfeekccpikldelpmiojknmb).
-        * Once you have the extension installed visit the Wolt [order history webpage](https://wolt.com/me/order-history).
-        * The extension will automatically pull your order history, display an alert when it's done processing it and forward your browser to your personal dashboard.
-        * You can share your dashboard with others by sharing the URL. The URL contains a hashed version of your Wolt user id.
-        * Sample dashboard can be viewed [here](https://datawolt.streamlit.app/?userid=example)."""
-    )
-
-    cont = st.container(border=True)
-    cont.video("https://youtu.be/6GuQHMsE0j0")
-
-    st.markdown(
-        """
-        #### Privacy and security
-        * Datawolt is **completely open-source** and the entire codebase can be viewed on [GitHub](https://github.com/idoavrah/datawolt).
-        * Datawolt **does not store** any of your identifiable personal data.
-        * Datawolt uses your temporary credentials to pull your order data from Wolt but saves only the relevant parts (orders, items, prices and restaurant names and locations). UserId is hashed, credentials are not saved anywhere.
-        * Your dashboard has a public endpoint and can be viewed by others if they know your hash-generated userid or if you share your URL. This generated userid is basically impossible to guess and cannot be traced back to the original Wolt user id or your username / e-mail.
-    """
-    )
 
 
 def build_dashboard(orders, monthly, totals, averages, everything, locations):
@@ -214,25 +183,23 @@ def build_dashboard(orders, monthly, totals, averages, everything, locations):
     st.map(locations, size="count")
 
 
-st.set_page_config(
-    page_title="DataWolt",
-    page_icon="📊",
-    menu_items={
-        "Report a bug": "https://github.com/idoavrah/datawolt/issues",
-        "About": "Datawolt, a Streamlit app by [Ido Avraham](https://idodo.dev)",
-    },
-)
-st.header("Welcome to DataWolt :yum:")
+st.header("User Dashboard 📊")
 
-userid = st.query_params.get("userid")
-if not userid:
-    build_welcome_screen()
-    
-elif not re.fullmatch(r'^[0-9a-z]*$', userid):
-    st.error(f"invalid userid: {userid}")
-    build_welcome_screen()
+if "userid" in st.session_state:
+    del st.session_state["userid"]
 
+if "userid" in st.query_params:
+    st.session_state["userid"] = st.query_params.get("userid")
 else:
-    init_firebase()
-    orders, monthly, totals, averages, everything, locations = prepare_data(userid)
-    build_dashboard(orders, monthly, totals, averages, everything, locations)
+    userid = st.text_input("User ID")
+    if userid:
+        st.session_state["userid"] = userid
+
+if "userid" in st.session_state:
+    if not re.fullmatch(r"^[0-9a-z]*$", st.session_state["userid"]):
+        st.error(f"invalid userid: {st.session_state['userid']}")
+
+    else:
+        init_firebase()
+        orders, monthly, totals, averages, everything, locations = prepare_data()
+        build_dashboard(orders, monthly, totals, averages, everything, locations)
